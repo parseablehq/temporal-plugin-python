@@ -1,0 +1,62 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "temporal-parseable"
+version = "0.1.0"
+description = "Temporal plugin that ships workflow and activity events to Parseable as OpenTelemetry logs and traces"
+readme = "README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.9"
+authors = [{ name = "Parseable", email = "hi@parseable.com" }]
+keywords = ["temporal", "parseable", "opentelemetry", "observability", "tracing", "logging"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: System :: Monitoring",
+]
+dependencies = [
+    "temporalio>=1.7",
+    # OTel pinned to 1.x — Temporal's contrib.opentelemetry rides 1.x.
+    # Bump the ceiling once temporalio.contrib.opentelemetry moves to 2.x.
+    "opentelemetry-sdk>=1.25,<2",
+    "opentelemetry-exporter-otlp-proto-http>=0.44b0,<2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "ruff>=0.4",
+    "mypy>=1.10",
+    "types-requests",
+]
+
+[project.urls]
+Homepage = "https://github.com/parseablehq/temporal-parseable"
+Repository = "https://github.com/parseablehq/temporal-parseable"
+Issues = "https://github.com/parseablehq/temporal-parseable/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/temporal_parseable"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.mypy]
+python_version = "3.9"
+strict = true
+ignore_missing_imports = true
