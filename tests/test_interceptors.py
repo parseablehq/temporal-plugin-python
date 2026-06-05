@@ -28,6 +28,7 @@ from temporalio.common import RetryPolicy
 from temporalio.exceptions import ApplicationError
 from temporalio.testing import WorkflowEnvironment
 from temporalio.worker import Worker, Replayer
+from temporalio.worker.workflow_sandbox import SandboxedWorkflowRunner, SandboxRestrictions
 
 from temporal_parseable import ParseablePlugin, ParseableConfig
 from temporal_parseable._emitter import ParseableEmitter
@@ -230,8 +231,16 @@ def make_interceptor_and_emitter():
     return interceptor, fake
 
 
+def _sandbox() -> SandboxedWorkflowRunner:
+    """Sandbox with temporal_parseable as passthrough — mirrors ParseablePlugin behaviour."""
+    return SandboxedWorkflowRunner(
+        restrictions=SandboxRestrictions.default.with_passthrough_modules("temporal_parseable")
+    )
+
+
 # ── tests ─────────────────────────────────────────────────────────────────────
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_workflow_started_completed(env: WorkflowEnvironment):
     interceptor, fake = make_interceptor_and_emitter()
@@ -241,6 +250,7 @@ async def test_workflow_started_completed(env: WorkflowEnvironment):
         workflows=ALL_WORKFLOWS,
         activities=ALL_ACTIVITIES,
         interceptors=[interceptor],
+        workflow_runner=_sandbox(),
     ):
         await env.client.execute_workflow(
             SimpleWorkflow.run, "World", id="wf-1", task_queue="test"
@@ -254,6 +264,7 @@ async def test_workflow_started_completed(env: WorkflowEnvironment):
     assert wf_records[1]["workflow_name"] == "SimpleWorkflow"
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_activity_started_completed(env: WorkflowEnvironment):
     interceptor, fake = make_interceptor_and_emitter()
@@ -263,6 +274,7 @@ async def test_activity_started_completed(env: WorkflowEnvironment):
         workflows=ALL_WORKFLOWS,
         activities=ALL_ACTIVITIES,
         interceptors=[interceptor],
+        workflow_runner=_sandbox(),
     ):
         await env.client.execute_workflow(
             SimpleWorkflow.run, "World", id="wf-2", task_queue="test"
@@ -279,6 +291,7 @@ async def test_activity_started_completed(env: WorkflowEnvironment):
     assert "duration_ms" in completed
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_activity_retries_and_failure(env: WorkflowEnvironment):
     interceptor, fake = make_interceptor_and_emitter()
@@ -288,6 +301,7 @@ async def test_activity_retries_and_failure(env: WorkflowEnvironment):
         workflows=ALL_WORKFLOWS,
         activities=ALL_ACTIVITIES,
         interceptors=[interceptor],
+        workflow_runner=_sandbox(),
     ):
         handle = await env.client.start_workflow(
             FailingActivityWorkflow.run,
@@ -305,6 +319,7 @@ async def test_activity_retries_and_failure(env: WorkflowEnvironment):
     assert "error" in failed[0]
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_signal_inbound(env: WorkflowEnvironment):
     interceptor, fake = make_interceptor_and_emitter()
@@ -314,6 +329,7 @@ async def test_signal_inbound(env: WorkflowEnvironment):
         workflows=ALL_WORKFLOWS,
         activities=ALL_ACTIVITIES,
         interceptors=[interceptor],
+        workflow_runner=_sandbox(),
     ):
         handle = await env.client.start_workflow(
             SignalWorkflow.run, id="wf-signal", task_queue="test"
@@ -328,6 +344,7 @@ async def test_signal_inbound(env: WorkflowEnvironment):
     assert inbound[0]["status"] == "started"
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_query_inbound(env: WorkflowEnvironment):
     interceptor, fake = make_interceptor_and_emitter()
@@ -337,6 +354,7 @@ async def test_query_inbound(env: WorkflowEnvironment):
         workflows=ALL_WORKFLOWS,
         activities=ALL_ACTIVITIES,
         interceptors=[interceptor],
+        workflow_runner=_sandbox(),
     ):
         handle = await env.client.start_workflow(
             QueryWorkflow.run, id="wf-query", task_queue="test"
@@ -349,6 +367,7 @@ async def test_query_inbound(env: WorkflowEnvironment):
     assert q_records[0]["message_name"] == "get_value"
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_update_inbound(env: WorkflowEnvironment):
     interceptor, fake = make_interceptor_and_emitter()
@@ -358,6 +377,7 @@ async def test_update_inbound(env: WorkflowEnvironment):
         workflows=ALL_WORKFLOWS,
         activities=ALL_ACTIVITIES,
         interceptors=[interceptor],
+        workflow_runner=_sandbox(),
     ):
         handle = await env.client.start_workflow(
             UpdateWorkflow.run, id="wf-update", task_queue="test"
@@ -371,6 +391,7 @@ async def test_update_inbound(env: WorkflowEnvironment):
     assert any(r["status"] == "completed" for r in u_records)
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_update_failure(env: WorkflowEnvironment):
     interceptor, fake = make_interceptor_and_emitter()
@@ -380,6 +401,7 @@ async def test_update_failure(env: WorkflowEnvironment):
         workflows=ALL_WORKFLOWS,
         activities=ALL_ACTIVITIES,
         interceptors=[interceptor],
+        workflow_runner=_sandbox(),
     ):
         handle = await env.client.start_workflow(
             UpdateWorkflow.run, id="wf-update-fail", task_queue="test"
@@ -393,6 +415,7 @@ async def test_update_failure(env: WorkflowEnvironment):
     assert "error" in failed[0]
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_user_events(env: WorkflowEnvironment):
     interceptor, fake = make_interceptor_and_emitter()
@@ -402,6 +425,7 @@ async def test_user_events(env: WorkflowEnvironment):
         workflows=ALL_WORKFLOWS,
         activities=ALL_ACTIVITIES,
         interceptors=[interceptor],
+        workflow_runner=_sandbox(),
     ):
         await env.client.execute_workflow(
             UserEventWorkflow.run, id="wf-events", task_queue="test"
@@ -414,6 +438,7 @@ async def test_user_events(env: WorkflowEnvironment):
     assert "test.completed" in names
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_child_workflow_outbound(env: WorkflowEnvironment):
     interceptor, fake = make_interceptor_and_emitter()
@@ -423,6 +448,7 @@ async def test_child_workflow_outbound(env: WorkflowEnvironment):
         workflows=ALL_WORKFLOWS,
         activities=ALL_ACTIVITIES,
         interceptors=[interceptor],
+        workflow_runner=_sandbox(),
     ):
         await env.client.execute_workflow(
             ChildWorkflowParent.run, "Alice",
@@ -437,6 +463,7 @@ async def test_child_workflow_outbound(env: WorkflowEnvironment):
     assert len(completed) == 1
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_continue_as_new_outbound(env: WorkflowEnvironment):
     interceptor, fake = make_interceptor_and_emitter()
@@ -446,6 +473,7 @@ async def test_continue_as_new_outbound(env: WorkflowEnvironment):
         workflows=ALL_WORKFLOWS,
         activities=ALL_ACTIVITIES,
         interceptors=[interceptor],
+        workflow_runner=_sandbox(),
     ):
         await env.client.execute_workflow(
             ContinueAsNewWorkflow.run, 1,
@@ -458,6 +486,7 @@ async def test_continue_as_new_outbound(env: WorkflowEnvironment):
     assert len(started) >= 1
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_replay_safety(env: WorkflowEnvironment):
     """
@@ -476,6 +505,7 @@ async def test_replay_safety(env: WorkflowEnvironment):
         workflows=ALL_WORKFLOWS,
         activities=ALL_ACTIVITIES,
         interceptors=[interceptor],
+        workflow_runner=_sandbox(),
     ):
         await env.client.execute_workflow(
             SimpleWorkflow.run, "ReplayTest",
