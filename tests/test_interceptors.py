@@ -20,9 +20,7 @@ than sending them to a real Parseable instance.
 from __future__ import annotations
 
 import asyncio
-from dataclasses import dataclass, field
-from typing import Any, List, Optional
-from unittest.mock import patch
+from typing import List
 
 import pytest
 from temporalio import activity, workflow

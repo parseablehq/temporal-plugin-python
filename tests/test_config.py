@@ -1,8 +1,6 @@
 """Unit tests for ParseableConfig."""
 from __future__ import annotations
 
-import os
-import pytest
 
 from temporal_parseable.config import ParseableConfig, LogsConfig, TracesConfig
 

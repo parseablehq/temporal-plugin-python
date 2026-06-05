@@ -4,7 +4,6 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
-import pytest
 
 from temporal_parseable.exporters import _sanitize_value, SanitizingSpanExporter
 

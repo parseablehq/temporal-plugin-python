@@ -48,7 +48,6 @@ from ._emitter import ParseableEmitter
 from .activity_interceptor import ParseableActivityInterceptor
 from .workflow_interceptor import (
     ParseableWorkflowInboundInterceptor,
-    ParseableWorkflowOutboundInterceptor,
 )
 from . import workflow as _workflow_module
 from ._version import PLUGIN_VERSION

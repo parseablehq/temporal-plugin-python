@@ -9,7 +9,7 @@ callers use TypedDict with total=False sections for optional keys.
 
 from __future__ import annotations
 
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 from typing_extensions import TypedDict, Required
 
 

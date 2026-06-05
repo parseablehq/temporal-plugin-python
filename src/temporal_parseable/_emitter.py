@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 import time
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Optional
 
 from opentelemetry.sdk._logs import LoggerProvider
 from opentelemetry._logs.severity import SeverityNumber
