@@ -72,7 +72,7 @@ def workflow_event(name: str, data: Optional[Dict[str, Any]] = None) -> None:
         return
 
     info = workflow.info()
-    _emitter.emit({  # type: ignore[arg-type]
+    _emitter.emit({
         "type": "user_event",
         "event_name": name,
         "event_data": data or {},

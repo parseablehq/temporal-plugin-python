@@ -13,6 +13,7 @@ import time
 from datetime import datetime, timezone
 from typing import Optional
 
+from opentelemetry._logs import Logger as APILogger
 from opentelemetry.sdk._logs import LoggerProvider
 from opentelemetry._logs.severity import SeverityNumber
 
@@ -37,13 +38,12 @@ class ParseableEmitter:
     ) -> None:
         self._service_name = service_name
         self._plugin_version = PLUGIN_VERSION
+        self._logger: Optional[APILogger] = None
         if logger_provider is not None:
             self._logger = logger_provider.get_logger(
                 "temporal_parseable",
                 schema_url="https://parseable.com/temporal/schema/v1",
             )
-        else:
-            self._logger = None
 
     def emit(self, record: ParseableEventRecord) -> None:
         """
@@ -56,9 +56,9 @@ class ParseableEmitter:
         if self._logger is None:
             return
 
-        record.setdefault("service_name", self._service_name)  # type: ignore[misc]
-        record.setdefault("timestamp", _now_iso())             # type: ignore[misc]
-        record.setdefault("plugin_version", self._plugin_version)  # type: ignore[misc]
+        record.setdefault("service_name", self._service_name)
+        record.setdefault("timestamp", _now_iso())
+        record.setdefault("plugin_version", self._plugin_version)
 
         body = json.dumps(record, default=str)
 

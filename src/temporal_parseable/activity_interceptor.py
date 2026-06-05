@@ -7,30 +7,24 @@ Wraps every activity execution and emits three possible records to Parseable:
   completed — after successful return
   failed    — after an exception (including ApplicationError retries)
 
-Fields captured on every record:
-
-  type          = "activity"
-  activity_name — activity function name
-  activity_id   — unique ID assigned by Temporal
-  attempt       — 1-based retry attempt number
-  workflow_id   — parent workflow
-  run_id        — parent run
-  workflow_name — parent workflow type name
-  duration_ms   — wall-clock ms from started to completed/failed
-  error         — stringified exception on failed records
-
 Mirrors the TypeScript activity-interceptor.ts.
 """
 
 from __future__ import annotations
 
 import time
-from typing import Any
+from typing import Any, Dict, cast
 
 from temporalio import activity
 from temporalio.worker import ActivityInboundInterceptor, ExecuteActivityInput
 
 from ._emitter import ParseableEmitter, _now_iso
+from .types import ParseableEventRecord
+
+
+def _record(**kwargs: Any) -> ParseableEventRecord:
+    """Build a ParseableEventRecord from keyword args without TypedDict expansion issues."""
+    return cast(ParseableEventRecord, kwargs)
 
 
 class ParseableActivityInterceptor(ActivityInboundInterceptor):
@@ -52,7 +46,8 @@ class ParseableActivityInterceptor(ActivityInboundInterceptor):
     async def execute_activity(self, input: ExecuteActivityInput) -> Any:
         info = activity.info()
 
-        base = {
+        # Common fields for all records from this execution
+        common: Dict[str, Any] = {
             "type": "activity",
             "activity_name": info.activity_type,
             "activity_id": info.activity_id,
@@ -63,7 +58,7 @@ class ParseableActivityInterceptor(ActivityInboundInterceptor):
         }
 
         # ── started ──────────────────────────────────────────────────────────
-        self._emitter.emit({**base, "status": "started", "timestamp": _now_iso()})  # type: ignore[arg-type]
+        self._emitter.emit(_record(**common, status="started", timestamp=_now_iso()))
 
         start_ns = time.monotonic_ns()
         try:
@@ -71,21 +66,21 @@ class ParseableActivityInterceptor(ActivityInboundInterceptor):
         except Exception as exc:
             duration_ms = (time.monotonic_ns() - start_ns) / 1_000_000
             # ── failed ───────────────────────────────────────────────────────
-            self._emitter.emit({  # type: ignore[arg-type]
-                **base,
-                "status": "failed",
-                "timestamp": _now_iso(),
-                "duration_ms": round(duration_ms, 3),
-                "error": str(exc),
-            })
+            self._emitter.emit(_record(
+                **common,
+                status="failed",
+                timestamp=_now_iso(),
+                duration_ms=round(duration_ms, 3),
+                error=str(exc),
+            ))
             raise
 
         duration_ms = (time.monotonic_ns() - start_ns) / 1_000_000
         # ── completed ────────────────────────────────────────────────────────
-        self._emitter.emit({  # type: ignore[arg-type]
-            **base,
-            "status": "completed",
-            "timestamp": _now_iso(),
-            "duration_ms": round(duration_ms, 3),
-        })
+        self._emitter.emit(_record(
+            **common,
+            status="completed",
+            timestamp=_now_iso(),
+            duration_ms=round(duration_ms, 3),
+        ))
         return result
