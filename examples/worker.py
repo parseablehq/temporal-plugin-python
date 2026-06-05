@@ -1,3 +1,13 @@
+"""
+Demo worker.
+
+Run with:
+    cd examples
+    PARSEABLE_URL=https://parseable.example.com \
+    PARSEABLE_USERNAME=admin \
+    PARSEABLE_PASSWORD=admin \
+    python worker.py
+"""
 from __future__ import annotations
 
 import asyncio
@@ -9,10 +19,6 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from temporalio.client import Client
 from temporalio.worker import Worker
-from temporalio.worker.workflow_sandbox import (
-    SandboxedWorkflowRunner,
-    SandboxRestrictions,
-)
 
 from temporal_parseable import ParseablePlugin, ParseableConfig
 from workflows import (
@@ -49,14 +55,11 @@ async def main() -> None:
         config.logs.stream if config.logs else "disabled",
     )
 
+    # Plugin on client enables span context propagation: client → workflow traces
     client = await Client.connect("localhost:7233", plugins=[plugin])
 
-    sandbox = SandboxedWorkflowRunner(
-        restrictions=SandboxRestrictions.default.with_passthrough_modules(
-            "temporal_parseable"
-        )
-    )
-
+    # Plugin on worker instruments activities and workflows.
+    # No SandboxedWorkflowRunner needed — ParseablePlugin handles it automatically.
     async with Worker(
         client,
         task_queue=TASK_QUEUE,
@@ -71,7 +74,7 @@ async def main() -> None:
             ContinueAsNewWorkflow,
         ],
         activities=[greet, charge_card],
-        workflow_runner=sandbox,
+        plugins=[plugin],
     ):
         logger.info("Worker started on task queue '%s'. Ctrl+C to stop.", TASK_QUEUE)
         await asyncio.Event().wait()
