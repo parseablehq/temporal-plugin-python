@@ -166,35 +166,38 @@ class ParseableWorkflowInboundInterceptor(WorkflowInboundInterceptor):
     # ── handle_query ──────────────────────────────────────────────────────────
 
     async def handle_query(self, input: HandleQueryInput) -> Any:
-        # Queries are never replayed from history — always emit.
+        # Queries are evaluated outside workflow history and may report
+        # is_replaying() in the SDK, so do not use the replay guard here.
         base: Dict[str, Any] = {
             **_wf_base(),
             "type": "query",
             "direction": "inbound",
             "message_name": input.query,
         }
-        self._emitter.emit({**base, "status": "started", "timestamp": _wf_now_iso()})  # type: ignore[arg-type]
+        self._emitter.emit(
+            {**base, "status": "started", "timestamp": _wf_now_iso()}
+        )  # type: ignore[arg-type]
 
         start = _wf_now()
         try:
             result = await self.next.handle_query(input)
         except Exception as exc:
             duration_ms = _ms_since(start)
-            self._emitter.emit({  # type: ignore[arg-type]
+            self._emitter.emit({
                 **base,
                 "status": "failed",
                 "timestamp": _wf_now_iso(),
                 "duration_ms": round(duration_ms, 3),
                 "error": str(exc),
-            })
+            })  # type: ignore[arg-type]
             raise
         duration_ms = _ms_since(start)
-        self._emitter.emit({  # type: ignore[arg-type]
+        self._emitter.emit({
             **base,
             "status": "completed",
             "timestamp": _wf_now_iso(),
             "duration_ms": round(duration_ms, 3),
-        })
+        })  # type: ignore[arg-type]
         return result
 
     # ── handle_update_handler ─────────────────────────────────────────────────

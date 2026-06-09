@@ -194,7 +194,7 @@ class ChildWorkflowChild:
 class ChildWorkflowParent:
     @workflow.run
     async def run(self, name: str) -> str:
-        return await workflow.start_child_workflow(
+        return await workflow.execute_child_workflow(
             ChildWorkflowChild.run, name,
             id=f"child-{workflow.info().workflow_id}",
         )
