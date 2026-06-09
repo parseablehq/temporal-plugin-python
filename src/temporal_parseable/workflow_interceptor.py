@@ -30,7 +30,7 @@ Mirrors the TypeScript workflow-interceptor.ts.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Dict, NoReturn, Optional
+from typing import Any, Dict, NoReturn, Optional, cast
 
 from temporalio import workflow
 from temporalio.worker import (
@@ -47,6 +47,7 @@ from temporalio.worker import (
 )
 
 from ._emitter import ParseableEmitter
+from .types import ParseableEventRecord
 
 
 def _wf_now() -> datetime:
@@ -77,6 +78,11 @@ def _emit_if_live(emitter: ParseableEmitter, record: Dict[str, Any]) -> None:
     """Emit only during live execution, never during history replay."""
     if not workflow.unsafe.is_replaying():
         emitter.emit(record)  # type: ignore[arg-type]
+
+
+def _record(**kwargs: Any) -> ParseableEventRecord:
+    """Build a ParseableEventRecord from keyword args without TypedDict expansion issues."""
+    return cast(ParseableEventRecord, kwargs)
 
 
 # ── inbound interceptor ───────────────────────────────────────────────────────
@@ -174,30 +180,28 @@ class ParseableWorkflowInboundInterceptor(WorkflowInboundInterceptor):
             "direction": "inbound",
             "message_name": input.query,
         }
-        self._emitter.emit(
-            {**base, "status": "started", "timestamp": _wf_now_iso()}
-        )  # type: ignore[arg-type]
+        self._emitter.emit(_record(**base, status="started", timestamp=_wf_now_iso()))
 
         start = _wf_now()
         try:
             result = await self.next.handle_query(input)
         except Exception as exc:
             duration_ms = _ms_since(start)
-            self._emitter.emit({
+            self._emitter.emit(_record(
                 **base,
-                "status": "failed",
-                "timestamp": _wf_now_iso(),
-                "duration_ms": round(duration_ms, 3),
-                "error": str(exc),
-            })  # type: ignore[arg-type]
+                status="failed",
+                timestamp=_wf_now_iso(),
+                duration_ms=round(duration_ms, 3),
+                error=str(exc),
+            ))
             raise
         duration_ms = _ms_since(start)
-        self._emitter.emit({
+        self._emitter.emit(_record(
             **base,
-            "status": "completed",
-            "timestamp": _wf_now_iso(),
-            "duration_ms": round(duration_ms, 3),
-        })  # type: ignore[arg-type]
+            status="completed",
+            timestamp=_wf_now_iso(),
+            duration_ms=round(duration_ms, 3),
+        ))
         return result
 
     # ── handle_update_handler ─────────────────────────────────────────────────
