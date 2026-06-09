@@ -24,7 +24,7 @@ classifiers = [
     "Topic :: System :: Monitoring",
 ]
 dependencies = [
-    "temporalio>=1.7",
+    "temporalio>=1.19",
     # OTel pinned to 1.x — Temporal's contrib.opentelemetry rides 1.x.
     # Bump the ceiling once temporalio.contrib.opentelemetry moves to 2.x.
     "opentelemetry-sdk>=1.25,<2",
@@ -51,8 +51,6 @@ packages = ["src/temporal_parseable"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
-markers = ["integration: requires live Temporal server (skipped in CI)"]
-addopts = "-m 'not integration'"
 
 [tool.ruff]
 line-length = 100

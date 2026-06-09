@@ -79,4 +79,5 @@ def workflow_event(name: str, data: Optional[Dict[str, Any]] = None) -> None:
         "workflow_id": info.workflow_id,
         "run_id": info.run_id,
         "workflow_name": info.workflow_type,
+        "timestamp": workflow.now().isoformat(),
     })

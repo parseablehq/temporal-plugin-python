@@ -29,7 +29,7 @@ Mirrors the TypeScript workflow-interceptor.ts.
 
 from __future__ import annotations
 
-import time
+from datetime import datetime
 from typing import Any, Dict, NoReturn, Optional
 
 from temporalio import workflow
@@ -46,7 +46,19 @@ from temporalio.worker import (
     ContinueAsNewInput,
 )
 
-from ._emitter import ParseableEmitter, _now_iso
+from ._emitter import ParseableEmitter
+
+
+def _wf_now() -> datetime:
+    return workflow.now()
+
+
+def _wf_now_iso() -> str:
+    return workflow.now().isoformat()
+
+
+def _ms_since(start: datetime) -> float:
+    return (workflow.now() - start).total_seconds() * 1000.0
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
@@ -95,26 +107,26 @@ class ParseableWorkflowInboundInterceptor(WorkflowInboundInterceptor):
 
     async def execute_workflow(self, input: ExecuteWorkflowInput) -> Any:
         base: Dict[str, Any] = {**_wf_base(), "type": "workflow"}
-        _emit_if_live(self._emitter, {**base, "status": "started", "timestamp": _now_iso()})
+        _emit_if_live(self._emitter, {**base, "status": "started", "timestamp": _wf_now_iso()})
 
-        start_ns = time.monotonic_ns()
+        start = _wf_now()
         try:
             result = await self.next.execute_workflow(input)
         except Exception as exc:
-            duration_ms = (time.monotonic_ns() - start_ns) / 1_000_000
+            duration_ms = _ms_since(start)
             _emit_if_live(self._emitter, {
                 **base,
                 "status": "failed",
-                "timestamp": _now_iso(),
+                "timestamp": _wf_now_iso(),
                 "duration_ms": round(duration_ms, 3),
                 "error": str(exc),
             })
             raise
-        duration_ms = (time.monotonic_ns() - start_ns) / 1_000_000
+        duration_ms = _ms_since(start)
         _emit_if_live(self._emitter, {
             **base,
             "status": "completed",
-            "timestamp": _now_iso(),
+            "timestamp": _wf_now_iso(),
             "duration_ms": round(duration_ms, 3),
         })
         return result
@@ -128,26 +140,26 @@ class ParseableWorkflowInboundInterceptor(WorkflowInboundInterceptor):
             "direction": "inbound",
             "message_name": input.signal,
         }
-        _emit_if_live(self._emitter, {**base, "status": "started", "timestamp": _now_iso()})
+        _emit_if_live(self._emitter, {**base, "status": "started", "timestamp": _wf_now_iso()})
 
-        start_ns = time.monotonic_ns()
+        start = _wf_now()
         try:
             await self.next.handle_signal(input)
         except Exception as exc:
-            duration_ms = (time.monotonic_ns() - start_ns) / 1_000_000
+            duration_ms = _ms_since(start)
             _emit_if_live(self._emitter, {
                 **base,
                 "status": "failed",
-                "timestamp": _now_iso(),
+                "timestamp": _wf_now_iso(),
                 "duration_ms": round(duration_ms, 3),
                 "error": str(exc),
             })
             raise
-        duration_ms = (time.monotonic_ns() - start_ns) / 1_000_000
+        duration_ms = _ms_since(start)
         _emit_if_live(self._emitter, {
             **base,
             "status": "completed",
-            "timestamp": _now_iso(),
+            "timestamp": _wf_now_iso(),
             "duration_ms": round(duration_ms, 3),
         })
 
@@ -160,26 +172,26 @@ class ParseableWorkflowInboundInterceptor(WorkflowInboundInterceptor):
             "direction": "inbound",
             "message_name": input.query,
         }
-        _emit_if_live(self._emitter, {**base, "status": "started", "timestamp": _now_iso()})
+        _emit_if_live(self._emitter, {**base, "status": "started", "timestamp": _wf_now_iso()})
 
-        start_ns = time.monotonic_ns()
+        start = _wf_now()
         try:
             result = await self.next.handle_query(input)
         except Exception as exc:
-            duration_ms = (time.monotonic_ns() - start_ns) / 1_000_000
+            duration_ms = _ms_since(start)
             _emit_if_live(self._emitter, {
                 **base,
                 "status": "failed",
-                "timestamp": _now_iso(),
+                "timestamp": _wf_now_iso(),
                 "duration_ms": round(duration_ms, 3),
                 "error": str(exc),
             })
             raise
-        duration_ms = (time.monotonic_ns() - start_ns) / 1_000_000
+        duration_ms = _ms_since(start)
         _emit_if_live(self._emitter, {
             **base,
             "status": "completed",
-            "timestamp": _now_iso(),
+            "timestamp": _wf_now_iso(),
             "duration_ms": round(duration_ms, 3),
         })
         return result
@@ -193,26 +205,26 @@ class ParseableWorkflowInboundInterceptor(WorkflowInboundInterceptor):
             "direction": "inbound",
             "message_name": input.update,
         }
-        _emit_if_live(self._emitter, {**base, "status": "started", "timestamp": _now_iso()})
+        _emit_if_live(self._emitter, {**base, "status": "started", "timestamp": _wf_now_iso()})
 
-        start_ns = time.monotonic_ns()
+        start = _wf_now()
         try:
             result = await self.next.handle_update_handler(input)
         except Exception as exc:
-            duration_ms = (time.monotonic_ns() - start_ns) / 1_000_000
+            duration_ms = _ms_since(start)
             _emit_if_live(self._emitter, {
                 **base,
                 "status": "failed",
-                "timestamp": _now_iso(),
+                "timestamp": _wf_now_iso(),
                 "duration_ms": round(duration_ms, 3),
                 "error": str(exc),
             })
             raise
-        duration_ms = (time.monotonic_ns() - start_ns) / 1_000_000
+        duration_ms = _ms_since(start)
         _emit_if_live(self._emitter, {
             **base,
             "status": "completed",
-            "timestamp": _now_iso(),
+            "timestamp": _wf_now_iso(),
             "duration_ms": round(duration_ms, 3),
         })
         return result
@@ -244,24 +256,24 @@ class ParseableWorkflowOutboundInterceptor(WorkflowOutboundInterceptor):
             "target_workflow_id": input.id or "",
         }
         if self._emitter:
-            _emit_if_live(self._emitter, {**base, "status": "started", "timestamp": _now_iso()})
+            _emit_if_live(self._emitter, {**base, "status": "started", "timestamp": _wf_now_iso()})
 
-        start_ns = time.monotonic_ns()
+        start = _wf_now()
         try:
             handle = await self.next.start_child_workflow(input)
         except Exception as exc:
             if self._emitter:
-                duration_ms = (time.monotonic_ns() - start_ns) / 1_000_000
+                duration_ms = _ms_since(start)
                 _emit_if_live(self._emitter, {
                     **base,
                     "status": "failed",
-                    "timestamp": _now_iso(),
+                    "timestamp": _wf_now_iso(),
                     "duration_ms": round(duration_ms, 3),
                     "error": str(exc),
                 })
             raise
 
-        return _ChildWorkflowHandleWrapper(handle, base, self._emitter, start_ns)
+        return _ChildWorkflowHandleWrapper(handle, base, self._emitter, start)
 
     # ── signal_external_workflow ──────────────────────────────────────────────
 
@@ -274,28 +286,28 @@ class ParseableWorkflowOutboundInterceptor(WorkflowOutboundInterceptor):
             "target_workflow_id": input.workflow_id,
         }
         if self._emitter:
-            _emit_if_live(self._emitter, {**base, "status": "started", "timestamp": _now_iso()})
+            _emit_if_live(self._emitter, {**base, "status": "started", "timestamp": _wf_now_iso()})
 
-        start_ns = time.monotonic_ns()
+        start = _wf_now()
         try:
             await self.next.signal_external_workflow(input)
         except Exception as exc:
             if self._emitter:
-                duration_ms = (time.monotonic_ns() - start_ns) / 1_000_000
+                duration_ms = _ms_since(start)
                 _emit_if_live(self._emitter, {
                     **base,
                     "status": "failed",
-                    "timestamp": _now_iso(),
+                    "timestamp": _wf_now_iso(),
                     "duration_ms": round(duration_ms, 3),
                     "error": str(exc),
                 })
             raise
         if self._emitter:
-            duration_ms = (time.monotonic_ns() - start_ns) / 1_000_000
+            duration_ms = _ms_since(start)
             _emit_if_live(self._emitter, {
                 **base,
                 "status": "completed",
-                "timestamp": _now_iso(),
+                "timestamp": _wf_now_iso(),
                 "duration_ms": round(duration_ms, 3),
             })
 
@@ -310,28 +322,28 @@ class ParseableWorkflowOutboundInterceptor(WorkflowOutboundInterceptor):
             "target_workflow_id": input.child_workflow_id,  # correct field name
         }
         if self._emitter:
-            _emit_if_live(self._emitter, {**base, "status": "started", "timestamp": _now_iso()})
+            _emit_if_live(self._emitter, {**base, "status": "started", "timestamp": _wf_now_iso()})
 
-        start_ns = time.monotonic_ns()
+        start = _wf_now()
         try:
             await self.next.signal_child_workflow(input)
         except Exception as exc:
             if self._emitter:
-                duration_ms = (time.monotonic_ns() - start_ns) / 1_000_000
+                duration_ms = _ms_since(start)
                 _emit_if_live(self._emitter, {
                     **base,
                     "status": "failed",
-                    "timestamp": _now_iso(),
+                    "timestamp": _wf_now_iso(),
                     "duration_ms": round(duration_ms, 3),
                     "error": str(exc),
                 })
             raise
         if self._emitter:
-            duration_ms = (time.monotonic_ns() - start_ns) / 1_000_000
+            duration_ms = _ms_since(start)
             _emit_if_live(self._emitter, {
                 **base,
                 "status": "completed",
-                "timestamp": _now_iso(),
+                "timestamp": _wf_now_iso(),
                 "duration_ms": round(duration_ms, 3),
             })
 
@@ -344,7 +356,7 @@ class ParseableWorkflowOutboundInterceptor(WorkflowOutboundInterceptor):
             "direction": "outbound",
         }
         if self._emitter:
-            _emit_if_live(self._emitter, {**base, "status": "started", "timestamp": _now_iso()})
+            _emit_if_live(self._emitter, {**base, "status": "started", "timestamp": _wf_now_iso()})
         self.next.continue_as_new(input)
         raise AssertionError("unreachable")  # satisfy NoReturn
 
@@ -362,12 +374,12 @@ class _ChildWorkflowHandleWrapper:
         handle: Any,
         base_record: Dict[str, Any],
         emitter: Optional[ParseableEmitter],
-        start_ns: int,
+        start: datetime,
     ) -> None:
         self._handle = handle
         self._base = base_record
         self._emitter = emitter
-        self._start_ns = start_ns
+        self._start = start
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._handle, name)
@@ -380,21 +392,21 @@ class _ChildWorkflowHandleWrapper:
             result = await self._handle
         except Exception as exc:
             if self._emitter:
-                duration_ms = (time.monotonic_ns() - self._start_ns) / 1_000_000
+                duration_ms = _ms_since(self._start)
                 _emit_if_live(self._emitter, {
                     **self._base,
                     "status": "failed",
-                    "timestamp": _now_iso(),
+                    "timestamp": _wf_now_iso(),
                     "duration_ms": round(duration_ms, 3),
                     "error": str(exc),
                 })
             raise
         if self._emitter:
-            duration_ms = (time.monotonic_ns() - self._start_ns) / 1_000_000
+            duration_ms = _ms_since(self._start)
             _emit_if_live(self._emitter, {
                 **self._base,
                 "status": "completed",
-                "timestamp": _now_iso(),
+                "timestamp": _wf_now_iso(),
                 "duration_ms": round(duration_ms, 3),
             })
         return result
