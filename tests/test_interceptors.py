@@ -130,13 +130,21 @@ class SignalWorkflow:
 
 @workflow.defn
 class QueryWorkflow:
+    def __init__(self) -> None:
+        self._done = False
+
     @workflow.run
     async def run(self) -> int:
+        await workflow.wait_condition(lambda: self._done)
         return 42
 
     @workflow.query
     def get_value(self) -> int:
         return 42
+
+    @workflow.signal
+    async def finish(self) -> None:
+        self._done = True
 
 
 @workflow.defn
@@ -227,7 +235,9 @@ ALL_ACTIVITIES = [greet_activity, failing_activity]
 
 def make_interceptor_and_emitter():
     from temporal_parseable import _ParseableWorkerInterceptor
+    from temporal_parseable import workflow as _workflow_module
     fake = FakeEmitter()
+    _workflow_module._set_emitter(fake)
     interceptor = _ParseableWorkerInterceptor(fake)
     return interceptor, fake
 
@@ -357,6 +367,8 @@ async def test_query_inbound(env: WorkflowEnvironment):
         )
         val = await handle.query(QueryWorkflow.get_value)
         assert val == 42
+        await handle.signal(QueryWorkflow.finish)
+        await handle.result()
 
     q_records = fake.of_type("query")
     assert len(q_records) >= 2  # started + completed

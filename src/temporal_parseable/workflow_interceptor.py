@@ -166,20 +166,21 @@ class ParseableWorkflowInboundInterceptor(WorkflowInboundInterceptor):
     # ── handle_query ──────────────────────────────────────────────────────────
 
     async def handle_query(self, input: HandleQueryInput) -> Any:
+        # Queries are never replayed from history — always emit.
         base: Dict[str, Any] = {
             **_wf_base(),
             "type": "query",
             "direction": "inbound",
             "message_name": input.query,
         }
-        _emit_if_live(self._emitter, {**base, "status": "started", "timestamp": _wf_now_iso()})
+        self._emitter.emit({**base, "status": "started", "timestamp": _wf_now_iso()})  # type: ignore[arg-type]
 
         start = _wf_now()
         try:
             result = await self.next.handle_query(input)
         except Exception as exc:
             duration_ms = _ms_since(start)
-            _emit_if_live(self._emitter, {
+            self._emitter.emit({  # type: ignore[arg-type]
                 **base,
                 "status": "failed",
                 "timestamp": _wf_now_iso(),
@@ -188,7 +189,7 @@ class ParseableWorkflowInboundInterceptor(WorkflowInboundInterceptor):
             })
             raise
         duration_ms = _ms_since(start)
-        _emit_if_live(self._emitter, {
+        self._emitter.emit({  # type: ignore[arg-type]
             **base,
             "status": "completed",
             "timestamp": _wf_now_iso(),

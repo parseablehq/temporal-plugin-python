@@ -40,12 +40,6 @@ from temporalio.plugin import SimplePlugin
 from temporalio.worker import ActivityInboundInterceptor, Interceptor, WorkflowInterceptorClassInput, WorkflowOutboundInterceptor
 from temporalio.worker.workflow_sandbox import SandboxedWorkflowRunner
 
-_PASSTHROUGH_MODULES = (
-    "temporal_parseable",
-    "opentelemetry",
-    "google.protobuf",
-)
-
 from .config import ParseableConfig, LogsConfig, TracesConfig
 from .exporters import build_tracer_provider, build_logger_provider
 from ._emitter import ParseableEmitter
@@ -55,6 +49,12 @@ from .workflow_interceptor import (
 )
 from . import workflow as _workflow_module
 from ._version import PLUGIN_VERSION
+
+_PASSTHROUGH_MODULES = (
+    "temporal_parseable",
+    "opentelemetry",
+    "google.protobuf",
+)
 
 __version__ = PLUGIN_VERSION
 __all__ = [
@@ -102,7 +102,7 @@ class ParseablePlugin(SimplePlugin):
             self._logger_provider.shutdown()
 
 
-def _apply_passthrough(existing):
+def _apply_passthrough(existing: object) -> SandboxedWorkflowRunner:
     base = existing if isinstance(existing, SandboxedWorkflowRunner) else SandboxedWorkflowRunner()
     restrictions = base.restrictions.with_passthrough_modules(*_PASSTHROUGH_MODULES)
     return SandboxedWorkflowRunner(
