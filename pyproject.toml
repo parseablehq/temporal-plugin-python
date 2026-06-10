@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "temporal-parseable"
-version = "0.1.0"
+version = "0.1.1"
 description = "Temporal plugin that ships workflow and activity events to Parseable as OpenTelemetry logs and traces"
 readme = "README.md"
 license = { text = "Apache-2.0" }
