@@ -56,6 +56,7 @@ class ParseableEventRecord(TypedDict, total=False):
     # ── Completion / failure fields ─────────────────────────────────────────
     duration_ms: float
     error: str                         # failure message
+    error_type: str                    # ApplicationError.type or exception class name
 
     # ── Message records (signal/query/update/child_workflow/continue_as_new) ─
     direction: EventDirection

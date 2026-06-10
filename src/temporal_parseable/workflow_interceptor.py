@@ -33,6 +33,7 @@ from datetime import datetime
 from typing import Any, Dict, NoReturn, Optional, cast
 
 from temporalio import workflow
+from temporalio.exceptions import ApplicationError
 from temporalio.worker import (
     WorkflowInboundInterceptor,
     WorkflowOutboundInterceptor,
@@ -125,7 +126,8 @@ class ParseableWorkflowInboundInterceptor(WorkflowInboundInterceptor):
                 "status": "failed",
                 "timestamp": _wf_now_iso(),
                 "duration_ms": round(duration_ms, 3),
-                "error": str(exc),
+                "error": exc.message if isinstance(exc, ApplicationError) else str(exc),
+                "error_type": exc.type if isinstance(exc, ApplicationError) else type(exc).__name__,
             })
             raise
         duration_ms = _ms_since(start)
@@ -158,7 +160,8 @@ class ParseableWorkflowInboundInterceptor(WorkflowInboundInterceptor):
                 "status": "failed",
                 "timestamp": _wf_now_iso(),
                 "duration_ms": round(duration_ms, 3),
-                "error": str(exc),
+                "error": exc.message if isinstance(exc, ApplicationError) else str(exc),
+                "error_type": exc.type if isinstance(exc, ApplicationError) else type(exc).__name__,
             })
             raise
         duration_ms = _ms_since(start)
@@ -192,7 +195,8 @@ class ParseableWorkflowInboundInterceptor(WorkflowInboundInterceptor):
                 status="failed",
                 timestamp=_wf_now_iso(),
                 duration_ms=round(duration_ms, 3),
-                error=str(exc),
+                error=exc.message if isinstance(exc, ApplicationError) else str(exc),
+                error_type=exc.type if isinstance(exc, ApplicationError) else type(exc).__name__,
             ))
             raise
         duration_ms = _ms_since(start)
@@ -225,7 +229,8 @@ class ParseableWorkflowInboundInterceptor(WorkflowInboundInterceptor):
                 "status": "failed",
                 "timestamp": _wf_now_iso(),
                 "duration_ms": round(duration_ms, 3),
-                "error": str(exc),
+                "error": exc.message if isinstance(exc, ApplicationError) else str(exc),
+                "error_type": exc.type if isinstance(exc, ApplicationError) else type(exc).__name__,
             })
             raise
         duration_ms = _ms_since(start)
@@ -277,7 +282,8 @@ class ParseableWorkflowOutboundInterceptor(WorkflowOutboundInterceptor):
                     "status": "failed",
                     "timestamp": _wf_now_iso(),
                     "duration_ms": round(duration_ms, 3),
-                    "error": str(exc),
+                    "error": exc.message if isinstance(exc, ApplicationError) else str(exc),
+                    "error_type": exc.type if isinstance(exc, ApplicationError) else type(exc).__name__,
                 })
             raise
 
@@ -307,7 +313,8 @@ class ParseableWorkflowOutboundInterceptor(WorkflowOutboundInterceptor):
                     "status": "failed",
                     "timestamp": _wf_now_iso(),
                     "duration_ms": round(duration_ms, 3),
-                    "error": str(exc),
+                    "error": exc.message if isinstance(exc, ApplicationError) else str(exc),
+                    "error_type": exc.type if isinstance(exc, ApplicationError) else type(exc).__name__,
                 })
             raise
         if self._emitter:
@@ -343,7 +350,8 @@ class ParseableWorkflowOutboundInterceptor(WorkflowOutboundInterceptor):
                     "status": "failed",
                     "timestamp": _wf_now_iso(),
                     "duration_ms": round(duration_ms, 3),
-                    "error": str(exc),
+                    "error": exc.message if isinstance(exc, ApplicationError) else str(exc),
+                    "error_type": exc.type if isinstance(exc, ApplicationError) else type(exc).__name__,
                 })
             raise
         if self._emitter:
@@ -406,7 +414,8 @@ class _ChildWorkflowHandleWrapper:
                     "status": "failed",
                     "timestamp": _wf_now_iso(),
                     "duration_ms": round(duration_ms, 3),
-                    "error": str(exc),
+                    "error": exc.message if isinstance(exc, ApplicationError) else str(exc),
+                    "error_type": exc.type if isinstance(exc, ApplicationError) else type(exc).__name__,
                 })
             raise
         if self._emitter:

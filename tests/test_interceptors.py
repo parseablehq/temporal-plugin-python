@@ -508,6 +508,7 @@ async def test_replay_safety(env: WorkflowEnvironment):
         activities=ALL_ACTIVITIES,
         interceptors=[interceptor],
         workflow_runner=_sandbox(),
+        max_cached_workflows=0,
     ):
         await env.client.execute_workflow(
             SimpleWorkflow.run, "ReplayTest",
