@@ -16,6 +16,7 @@ import time
 from typing import Any, Dict, cast
 
 from temporalio import activity
+from temporalio.exceptions import ApplicationError
 from temporalio.worker import ActivityInboundInterceptor, ExecuteActivityInput
 
 from ._emitter import ParseableEmitter, _now_iso
@@ -71,7 +72,8 @@ class ParseableActivityInterceptor(ActivityInboundInterceptor):
                 status="failed",
                 timestamp=_now_iso(),
                 duration_ms=round(duration_ms, 3),
-                error=str(exc),
+                error=exc.message if isinstance(exc, ApplicationError) else str(exc),
+                error_type=exc.type if isinstance(exc, ApplicationError) else type(exc).__name__,
             ))
             raise
 

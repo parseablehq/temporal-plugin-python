@@ -17,7 +17,6 @@ pip install temporal-parseable
 ```python
 from temporalio.client import Client
 from temporalio.worker import Worker
-from temporalio.worker.workflow_sandbox import SandboxedWorkflowRunner, SandboxRestrictions
 from temporal_parseable import ParseablePlugin, ParseableConfig
 
 config = ParseableConfig(
@@ -30,16 +29,12 @@ plugin = ParseablePlugin(config)
 
 client = await Client.connect("localhost:7233", plugins=[plugin])
 
-sandbox = SandboxedWorkflowRunner(
-    restrictions=SandboxRestrictions.default.with_passthrough_modules("temporal_parseable")
-)
-
 async with Worker(
     client,
     task_queue="my-queue",
     workflows=[MyWorkflow],
     activities=[my_activity],
-    workflow_runner=sandbox,
+    plugins=[plugin],
 ):
     await asyncio.Event().wait()
 ```

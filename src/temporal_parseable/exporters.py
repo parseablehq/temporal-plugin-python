@@ -51,8 +51,8 @@ def _sanitize_span(span: ReadableSpan) -> ReadableSpan:
             clean[key] = sanitised
     try:
         object.__setattr__(span, "_attributes", clean)
-    except (AttributeError, TypeError):
-        pass
+    except (AttributeError, TypeError) as exc:
+        logger.warning("Could not sanitize span attributes: %s", exc)
     return span
 
 

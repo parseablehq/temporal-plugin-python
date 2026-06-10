@@ -34,8 +34,11 @@ from __future__ import annotations
 
 from typing import Optional, Type
 
+from opentelemetry import trace as _otel_trace
+from temporalio.contrib.opentelemetry import TracingInterceptor
 from temporalio.plugin import SimplePlugin
 from temporalio.worker import ActivityInboundInterceptor, Interceptor, WorkflowInterceptorClassInput, WorkflowOutboundInterceptor
+from temporalio.worker.workflow_sandbox import SandboxedWorkflowRunner
 
 from .config import ParseableConfig, LogsConfig, TracesConfig
 from .exporters import build_tracer_provider, build_logger_provider
@@ -46,6 +49,12 @@ from .workflow_interceptor import (
 )
 from . import workflow as _workflow_module
 from ._version import PLUGIN_VERSION
+
+_PASSTHROUGH_MODULES = (
+    "temporal_parseable",
+    "opentelemetry",
+    "google.protobuf",
+)
 
 __version__ = PLUGIN_VERSION
 __all__ = [
@@ -69,10 +78,17 @@ class ParseablePlugin(SimplePlugin):
         _workflow_module._set_emitter(self._emitter)
 
         worker_interceptor = _ParseableWorkerInterceptor(self._emitter)
+        interceptors: list[Interceptor] = [worker_interceptor]
+
+        if self._tracer_provider is not None:
+            _otel_trace.set_tracer_provider(self._tracer_provider)
+            tracer = self._tracer_provider.get_tracer(__name__)
+            interceptors.append(TracingInterceptor(tracer=tracer))
 
         super().__init__(
-            name="parseable.temporal",
-            interceptors=[worker_interceptor],
+            name="parseable.ParseablePlugin",
+            interceptors=interceptors,
+            workflow_runner=_apply_passthrough,
         )
 
     @property
@@ -84,6 +100,15 @@ class ParseablePlugin(SimplePlugin):
             self._tracer_provider.shutdown()
         if self._logger_provider:
             self._logger_provider.shutdown()
+
+
+def _apply_passthrough(existing: object) -> SandboxedWorkflowRunner:
+    base = existing if isinstance(existing, SandboxedWorkflowRunner) else SandboxedWorkflowRunner()
+    restrictions = base.restrictions.with_passthrough_modules(*_PASSTHROUGH_MODULES)
+    return SandboxedWorkflowRunner(
+        restrictions=restrictions,
+        runner_class=base.runner_class,
+    )
 
 
 class _ParseableWorkerInterceptor(Interceptor):
